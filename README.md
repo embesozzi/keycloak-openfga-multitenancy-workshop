@@ -5,6 +5,8 @@ This repository contains a PoC implemented with [Keycloak](https://www.keycloak.
 
 This workshop is based the following article [Building Scalable Multi-Tenancy Authentication and Authorization using Open Standards and Open-Source Software](https://embesozzi.medium.com/building-scalable-multi-tenancy-authentication-and-authorization-using-open-standards-and-7341fcd87b64). You will find there full details about the authorization architecture guidelines and involved components.
 
+![arquitecture](docs/arquitecture.png)
+
 # How to install?
 ## Prerequisites
 
@@ -36,10 +38,14 @@ This workshop is based the following article [Building Scalable Multi-Tenancy Au
     | ------------------------- |:-----------------------------:|:-------------------------:|:-----------------------------------------:
     | Keycloak Console          |   http://keycloak:8081        |  admin / password         | quay.io/keycloak/keycloak:26.0.6         |
     | OpenFGA Playground        |   http://localhost:3000/playground  |                     | openfga/openfga:v1.8.0                   | 
-    | Store Portal              |   http://payplus.lab:4000           |                           | Custom image                             |
+    | PayPlus Portal              |   http://payplus.lab:4000           |                           | ghcr.io/twogenidentity/demoapp-payplus-multitenancy                             |
 
 
 ## Test cases
 
 The test cases are described in the article [Building Scalable Multi-Tenancy Authentication and Authorization using Open Standards and Open-Source Software](https://embesozzi.medium.com/building-scalable-multi-tenancy-authentication-and-authorization-using-open-standards-and-7341fcd87b64).
 
+
+![playplus-1](docs/payplus-1.png)
+
+![playplus-2](docs/payplus-2.png)

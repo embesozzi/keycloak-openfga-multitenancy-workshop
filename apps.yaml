@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  apisix:
+    image: ghcr.io/embesozzi/apisix-authz-openfga:latest
+    container_name: apisix
+    volumes:
+      - $PWD/apisix/routes.yaml:/usr/local/apisix/conf/apisix.yaml:ro                  
+      - $PWD/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - $PWD/apisix/plugins/authz-openfga.lua:/usr/local/apisix/apisix/plugins/authz-openfga.lua
+    environment:
+      FGA_HOST: http://openfga:8080
+    ports:
+      - "9080:9080"
+
+  demoapp-payplus:
+    image: ghcr.io/twogenidentity/demoapp-payplus-multitenancy
+    container_name: demoapp-payplus
+    ports:
+      - "4000:4000"
+    environment: 
+      VUE_APP_OIDC_PROVIDER_DOMAIN: http://keycloak:8081/realms/PayPlus
+      VUE_APP_API_URL: /api
+      VUE_APP_CLIENT_ID: portal
+    depends_on:
+      keycloak:
+        condition: service_healthy

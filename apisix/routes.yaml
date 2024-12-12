@@ -1,0 +1,54 @@
+services:
+
+routes:
+  - uris:
+      - "/api/org-a/transactions"
+    methods: ["GET"]
+    plugins:
+      authz-openfga:
+        host: ${{FGA_HOST}}
+        check:
+          condition: AND
+          tuples:
+          - user_id: claim::sub
+            relation: assignee
+            object_type: role
+            object_id: view_transaction_any
+          - user_id: claim::sub
+            relation: member
+            object_type: organization
+            object_id: org-a
+      mocking:
+        _meta:
+          priority: -2000
+        delay: 1
+        content_type": "application/json"
+        response_status": 200
+        response_example: "[{\"invoice_id\": \"INV001\", \"recipient\": \"John Doe\", \"date\": \"2024-11-01\", \"location\": \"New York\", \"amount\": 150.50, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV002\", \"recipient\": \"Jane Smith\", \"date\": \"2024-11-02\", \"location\": \"Los Angeles\", \"amount\": 320.75, \"status\": \"Pending\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV003\", \"recipient\": \"Mike Johnson\", \"date\": \"2024-11-03\", \"location\": \"Chicago\", \"amount\": 225.00, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV004\", \"recipient\": \"Sara Lee\", \"date\": \"2024-11-04\", \"location\": \"Miami\", \"amount\": 410.40, \"status\": \"Failed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV005\", \"recipient\": \"Tom Williams\", \"date\": \"2024-11-05\", \"location\": \"Houston\", \"amount\": 175.60, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV006\", \"recipient\": \"Linda Carter\", \"date\": \"2024-11-06\", \"location\": \"Dallas\", \"amount\": 89.99, \"status\": \"Pending\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV007\", \"recipient\": \"Gary White\", \"date\": \"2024-11-07\", \"location\": \"Boston\", \"amount\": 120.25, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV008\", \"recipient\": \"Emily Clark\", \"date\": \"2024-11-08\", \"location\": \"Phoenix\", \"amount\": 275.30, \"status\": \"Failed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV009\", \"recipient\": \"David Lee\", \"date\": \"2024-11-09\", \"location\": \"Atlanta\", \"amount\": 320.00, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV010\", \"recipient\": \"Jessica Adams\", \"date\": \"2024-11-10\", \"location\": \"San Francisco\", \"amount\": 185.45, \"status\": \"Pending\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV011\", \"recipient\": \"William Brown\", \"date\": \"2024-11-11\", \"location\": \"Seattle\", \"amount\": 142.00, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV012\", \"recipient\": \"Nancy Wilson\", \"date\": \"2024-11-12\", \"location\": \"Denver\", \"amount\": 300.90, \"status\": \"Failed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV013\", \"recipient\": \"Andrew Scott\", \"date\": \"2024-11-13\", \"location\": \"Las Vegas\", \"amount\": 520.60, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV014\", \"recipient\": \"Olivia Turner\", \"date\": \"2024-11-14\", \"location\": \"San Diego\", \"amount\": 189.45, \"status\": \"Pending\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV015\", \"recipient\": \"Charles Taylor\", \"date\": \"2024-11-15\", \"location\": \"Orlando\", \"amount\": 315.25, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV016\", \"recipient\": \"Megan Hall\", \"date\": \"2024-11-16\", \"location\": \"Salt Lake City\", \"amount\": 95.00, \"status\": \"Failed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV017\", \"recipient\": \"Benjamin King\", \"date\": \"2024-11-17\", \"location\": \"Detroit\", \"amount\": 220.15, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV018\", \"recipient\": \"Isabella Harris\", \"date\": \"2024-11-18\", \"location\": \"Cleveland\", \"amount\": 420.50, \"status\": \"Pending\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV019\", \"recipient\": \"Lucas Martinez\", \"date\": \"2024-11-19\", \"location\": \"Portland\", \"amount\": 295.30, \"status\": \"Completed\", \"org\": \"Organization A\"}, {\"invoice_id\": \"INV020\", \"recipient\": \"Sophia Garcia\", \"date\": \"2024-11-20\", \"location\": \"New Jersey\", \"amount\": 190.75, \"status\": \"Failed\", \"org\": \"Organization A\"}]"
+        
+  - uris:
+      - "/api/org-b/transactions"
+    methods: ["GET"]
+    plugins:
+      authz-openfga:
+        host: ${{FGA_HOST}}
+        check:
+          condition: AND
+          tuples:
+          - user_id: claim::sub
+            relation: assignee
+            object_type: role
+            object_id: view_transaction_any
+          - user_id: claim::sub
+            relation: member
+            object_type: organization
+            object_id: org-b    
+      mocking:
+        _meta:
+          priority: -2000
+        delay: 1
+        content_type": "application/json"
+        response_status": 200
+        response_example: "[{\"invoice_id\": \"INV101\", \"recipient\": \"Anna Mitchell\", \"date\": \"2024-11-01\", \"location\": \"San Antonio\", \"amount\": 145.75, \"status\": \"Completed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV102\", \"recipient\": \"Brian Davis\", \"date\": \"2024-11-02\", \"location\": \"Philadelphia\", \"amount\": 300.40, \"status\": \"Pending\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV103\", \"recipient\": \"Clara Thompson\", \"date\": \"2024-11-03\", \"location\": \"San Jose\", \"amount\": 215.90, \"status\": \"Completed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV104\", \"recipient\": \"Derek Wilson\", \"date\": \"2024-11-04\", \"location\": \"Indianapolis\", \"amount\": 400.25, \"status\": \"Failed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV105\", \"recipient\": \"Ella Johnson\", \"date\": \"2024-11-05\", \"location\": \"Austin\", \"amount\": 180.60, \"status\": \"Pending\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV106\", \"recipient\": \"Frank Green\", \"date\": \"2024-11-06\", \"location\": \"Columbus\", \"amount\": 92.50, \"status\": \"Completed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV107\", \"recipient\": \"Grace Parker\", \"date\": \"2024-11-07\", \"location\": \"Charlotte\", \"amount\": 130.75, \"status\": \"Completed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV108\", \"recipient\": \"Henry Lewis\", \"date\": \"2024-11-08\", \"location\": \"Jacksonville\", \"amount\": 270.85, \"status\": \"Failed\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV109\", \"recipient\": \"Ivy Carter\", \"date\": \"2024-11-09\", \"location\": \"Fort Worth\", \"amount\": 310.00, \"status\": \"Pending\", \"org\": \"Organization B\"}, {\"invoice_id\": \"INV110\", \"recipient\": \"Jack Taylor\", \"date\": \"2024-11-10\", \"location\": \"Memphis\", \"amount\": 195.45, \"status\": \"Completed\", \"org\": \"Organization B\"}]"
+       
+#END
