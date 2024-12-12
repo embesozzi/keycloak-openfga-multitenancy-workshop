@@ -14,7 +14,7 @@ services:
       - "9080:9080"
 
   demoapp-payplus:
-    image: ghcr.io/twogenidentity/demoapp-payplus-multitenancy
+    image: twogenidentity/demoapp-payplus-multitenancy
     container_name: demoapp-payplus
     ports:
       - "4000:4000"
