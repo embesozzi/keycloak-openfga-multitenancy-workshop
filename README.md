@@ -7,6 +7,10 @@ This workshop is based the following article [Building Scalable Multi-Tenancy Au
 
 ![arquitecture](docs/arquitecture.png)
 
+- Keycloak: New Organization Feature
+- Keycloak OpenFGA Event Publisher Extension: New support for synchronizing the organization model 
+- Apache APISIX Authorization OpenFGA Plugin: New support for multiples policies with condition (AND / OR)
+
 # How to install?
 ## Prerequisites
 
