@@ -1,0 +1,9 @@
+/target/
+/.settings/
+.idea/
+.classpath
+.project
+.DS_Store
+
+dependency-reduced-pom.xml
+BACKLOG.md

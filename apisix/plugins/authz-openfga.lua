@@ -246,6 +246,9 @@ local function get_jwt_claim_value(authorization_header, claim_name)
     end
     local jwt_token = string.sub(authorization_header, 8)
     local jwt_obj = jwt:load_jwt(jwt_token)
+    if not jwt_obj or not jwt_obj.payload then
+        return nil, "invalid JWT token"
+    end
     return jwt_obj.payload[claim_name]
 end
 
@@ -265,17 +268,18 @@ function _M.access(conf, ctx)
         -- Only support jwt claim
         local user_jwt_claim = tuple.user_id:gsub("claim::", "")
         
-        user_id = get_jwt_claim_value(
+        local err
+        user_id, err = get_jwt_claim_value(
             core.request.header(ctx, "Authorization"),
             user_jwt_claim
         )
-        
-        core.log.info("[authz-openfga] user: " .. user_id)
 
         if not user_id then
             log.error("failed to get JWT token claim: ", err)
             return 401, {message = "Missing JWT token claim in request"}
         end
+
+        core.log.info("[authz-openfga] user: " .. user_id)
 
         local tuple_key = {
             user = tuple.user_type .. ":" .. user_id,

@@ -1,0 +1,184 @@
+# Multi-tenancy workshop (Keycloak organizations + OpenFGA + Apache APISIX): `make up`
+#
+# Start order:
+#   openfga-postgres -> openfga-migrate -> openfga -> openfga-import (store "keycloak" + model)
+#   keycloak-postgres -> keycloak (with the extension) -> keycloak-import (realm PayPlus, organizations, users)
+#   -> apisix, demoapp-payplus
+#
+# Versions are in .env.
+
+name: keycloak-openfga-multitenancy-workshop
+
+x-postgres-healthcheck: &postgres-healthcheck
+  interval: 5s
+  timeout: 5s
+  retries: 10
+
+services:
+
+  # ---------------------------------------------------------------- OpenFGA
+  openfga-postgres:
+    image: postgres:17-alpine
+    container_name: openfga-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      <<: *postgres-healthcheck
+
+  openfga-migrate:
+    image: openfga/openfga:${OPENFGA_VERSION}
+    container_name: openfga-migrate
+    command: migrate
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://postgres:password@openfga-postgres:5432/postgres?sslmode=disable
+    depends_on:
+      openfga-postgres:
+        condition: service_healthy
+
+  openfga:
+    image: openfga/openfga:${OPENFGA_VERSION}
+    container_name: openfga
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://postgres:password@openfga-postgres:5432/postgres?sslmode=disable
+      OPENFGA_DATASTORE_MAX_OPEN_CONNS: 100
+      OPENFGA_LOG_LEVEL: warn
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=openfga:8081"]
+      interval: 3s
+      timeout: 30s
+      retries: 10
+    ports:
+      - "8080:8080" # HTTP API
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+
+  # Creates the "keycloak" store with openfga/model.dsl, once (skipped if it exists)
+  openfga-import:
+    image: twogenidentity/openfga-import:${OPENFGA_CLI_VERSION}
+    pull_policy: build
+    build:
+      context: ./openfga
+      args:
+        OPENFGA_CLI_VERSION: ${OPENFGA_CLI_VERSION}
+    container_name: openfga-import
+    restart: "no"
+    environment:
+      FGA_API_URL: http://openfga:8080
+      FGA_STORE_NAME: keycloak
+    volumes:
+      - ./openfga/store.yaml:/openfga/store.yaml:ro
+      - ./openfga/model.dsl:/openfga/model.dsl:ro
+    depends_on:
+      openfga:
+        condition: service_healthy
+
+  # --------------------------------------------------------------- Keycloak
+  keycloak-postgres:
+    image: postgres:17-alpine
+    container_name: keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      <<: *postgres-healthcheck
+
+  # Keycloak with the keycloak-openfga-event-publisher extension (keycloak/Dockerfile)
+  keycloak:
+    image: twogenidentity/keycloak-openfga:${KC_VERSION}-${OPENFGA_PUBLISHER_VERSION}
+    pull_policy: build
+    build:
+      context: ./keycloak
+      args:
+        KC_VERSION: ${KC_VERSION}
+        OPENFGA_PUBLISHER_VERSION: ${OPENFGA_PUBLISHER_VERSION}
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KC_HTTP_PORT: 8081
+      KC_HOSTNAME: http://keycloak:8081
+      KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info,com.twogenidentity.keycloak:debug
+      # OpenFGA event publisher (https://github.com/embesozzi/keycloak-openfga-event-publisher#configuration)
+      KC_SPI_EVENTS_LISTENER_OPENFGA_EVENTS_PUBLISHER_OPENFGA_API_URL: http://openfga:8080
+      KC_SPI_EVENTS_LISTENER_OPENFGA_EVENTS_PUBLISHER_OPENFGA_STORE_NAME: keycloak
+      KC_SPI_EVENTS_LISTENER_OPENFGA_EVENTS_PUBLISHER_OPENFGA_IDENTIFIER: name
+      KC_SPI_EVENTS_LISTENER_OPENFGA_EVENTS_PUBLISHER_OPENFGA_CREDENTIALS_METHOD: none
+    healthcheck:
+      # Readiness on the management port; the image has no curl
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    ports:
+      - "8081:8081"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+      openfga-import:
+        condition: service_completed_successfully
+
+  # Realm PayPlus: organizations, role model, users, clients (keycloak/init.sh); the extension publishes them to OpenFGA
+  keycloak-import:
+    image: quay.io/keycloak/keycloak:${KC_VERSION}
+    container_name: keycloak-import
+    restart: "no"
+    entrypoint: ["/bin/bash", "/opt/keycloak/init.sh"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8081
+      KEYCLOAK_USER: ${KC_ADMIN_USER}
+      KEYCLOAK_PASSWORD: ${KC_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak/init.sh:/opt/keycloak/init.sh:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # ------------------------------------------------------------------- Apps
+  # Apache APISIX with the authz-openfga plugin: role AND organization checks per tenant route
+  apisix:
+    image: ghcr.io/embesozzi/apisix-authz-openfga:latest
+    container_name: apisix
+    environment:
+      FGA_HOST: http://openfga:8080
+    volumes:
+      - ./apisix/routes.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+      - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix/plugins/authz-openfga.lua:/usr/local/apisix/apisix/plugins/authz-openfga.lua:ro
+    ports:
+      - "9080:9080" # APISIX
+      - "4000:4000" # PayPlus portal (demoapp-payplus shares this network)
+    depends_on:
+      keycloak-import:
+        condition: service_completed_successfully
+
+  # PayPlus portal (OIDC with Keycloak, organization scope). Its dev server proxies /api to localhost:9080,
+  # so it runs in the network namespace of apisix.
+  demoapp-payplus:
+    image: twogenidentity/demoapp-payplus-multitenancy
+    container_name: demoapp-payplus
+    network_mode: service:apisix
+    environment:
+      VUE_APP_OIDC_PROVIDER_DOMAIN: http://keycloak:8081/realms/PayPlus
+      VUE_APP_CLIENT_ID: portal
+      VUE_APP_API_URL: /api/
+    depends_on:
+      apisix:
+        condition: service_started
+        restart: true # a restarted apisix has a new network namespace
